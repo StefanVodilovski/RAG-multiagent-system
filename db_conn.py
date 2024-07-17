@@ -67,7 +67,7 @@ res = conn.list_collections()
 print(res)
 
 
-collection_name = "esgs"
+collection_name = "google"
 
 
 emmbedding_dim = len(data[1]["vector"])
