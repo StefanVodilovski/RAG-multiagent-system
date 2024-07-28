@@ -1,3 +1,5 @@
 .venv
 volumes
 lib64
+.env
+.idea

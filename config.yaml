@@ -1,0 +1,2 @@
+hf_model_name: 'HuggingFaceH4/zephyr-7b-alpha'
+model_id: 'sentence-transformers/all-MiniLM-L6-v2'

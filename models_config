@@ -1,0 +1,17 @@
+[
+    {
+        "model": "core42/jais-30b-v1",
+        "library": "transformers",
+        "tags": ["jais-30b-v1", "transformers"]
+    },
+    {
+        "model": "core42/jais-13b",
+        "library": "transformers",
+        "tags": ["jais-13b", "transformers"]
+    },
+    {
+        "model": "google/bert-large-uncased-whole-word-masking-finetuned-squad",
+        "library": "transformers",
+        "tags": ["bert", "transformers"]
+    }
+]
