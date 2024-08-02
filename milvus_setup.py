@@ -18,7 +18,7 @@ def pad_vector(vector, target_dim):
 
 
 def creating_schema():
-    # define the collection schema
+    # Define the collection schema
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=False),
         FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=vector_dim),
@@ -59,24 +59,39 @@ def prepare_entities():
     return entities
 
 
+def create_index(collection):
+    # Define an index for the collection
+    index_params = {
+        "index_type": "HNSW",  # Hierarchical Navigable Small World
+        "params": {"M": 16, "efConstruction": 200},  # Adjust parameters based on your use case
+        "metric_type": "L2"  # Euclidean distance
+    }
+    collection.create_index(field_name="vector", index_params=index_params)
+    print("Index created successfully.")
+
+
 if __name__ == "__main__":
-    # read the CSV file and determine the vector dimension
+    # Read the CSV file and determine the vector dimension
     csv_file = "google_data/google_embeddings/google_2022.csv"
     df = pd.read_csv(csv_file)
 
     first_vector = df['vector'].apply(lambda x: eval(x)).iloc[0]
     vector_dim = len(first_vector)
 
-    # set up a Milvus client
+    # Set up a Milvus client
     connections.connect(
         alias="default",
         uri="http://localhost:19530"
     )
 
-    # creating schema and collection
+    # Creating schema and collection
     schema = creating_schema()
     collection = creating_collection(schema)
 
-    # prepare and insert data into Milvus
+    # Create an index if it doesn't exist
+    if not collection.has_index():
+        create_index(collection)
+
+    # Prepare and insert data into Milvus
     mr = collection.insert(prepare_entities())
     print(f"Insert result: {mr}")

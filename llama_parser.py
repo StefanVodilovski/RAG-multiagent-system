@@ -8,12 +8,12 @@ from llama_parse import LlamaParse
 from llama_index.core.node_parser import MarkdownElementNodeParser
 from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
 
-# load api keys
+# Load api keys
 load_dotenv(Path(".env"))
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 LLAMA_API_KEY = os.getenv("LLAMA_PARSER_KEY")
 
-# load project config
+# Load project config
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
@@ -29,13 +29,13 @@ def query(texts):
 
 
 def load_and_parse_documents():
-    # create parser
+    # Create parser
     parser = LlamaParse(
         api_key=LLAMA_API_KEY,  # you will need an API key, get it from https://cloud.llamaindex.ai/
         result_type="markdown"  # "markdown" and "text" are available
     )
 
-    # load and parse documents
+    # Load and parse documents
     documents = [parser.load_data('google_data/google-2021-environmental-report.pdf'),
                  parser.load_data('google_data/google-2022-environmental-report.pdf'),
                  parser.load_data('google_data/google-2023-environmental-report.pdf'),
