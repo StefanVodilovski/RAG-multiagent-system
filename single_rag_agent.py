@@ -1,89 +1,78 @@
+import os
 import torch
-from transformers import RagTokenizer, RagTokenForGeneration
-from pymilvus import connections, Collection
+import numpy as np
+from pymilvus import Collection, connections
+from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+# Set up models
+embedder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+tokenizer = AutoTokenizer.from_pretrained('facebook/bart-large')
+rag_model = AutoModelForSeq2SeqLM.from_pretrained('facebook/bart-large')
 
-def connect_to_milvus():
-    connections.connect(
-        alias="default",
-        uri="http://localhost:19530"
+# Connect to Milvus
+connections.connect(alias="default", host="localhost", port="19530")
+
+# Load the collection
+collection_name = "google_2022"
+collection = Collection(name=collection_name)
+
+def generate_embeddings(texts):
+    embeddings = embedder.encode(texts, convert_to_tensor=True)
+    return embeddings.numpy()
+
+def retrieve_relevant_embeddings(query_text, top_k=5):
+    query_embedding = generate_embeddings([query_text])[0]
+
+    # Perform the search
+    search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+    results = collection.search(
+        data=[query_embedding.tolist()],
+        anns_field="vector",
+        param=search_params,
+        limit=top_k
     )
 
+    # Extract IDs from search results
+    ids = [hit.id for hit in results[0]]
+    print(f"Retrieved IDs: {ids}")
 
-def load_collection(collection_name):
-    return Collection(collection_name)
-
-
-def load_model_and_tokenizer():
-    tokenizer = RagTokenizer.from_pretrained("facebook/rag-token-nq")
-    model = RagTokenForGeneration.from_pretrained("facebook/rag-token-nq")
-    return tokenizer, model
-
-
-class RAGAgent:
-    def __init__(self, collection, tokenizer, model, vector_dim):
-        self.collection = collection
-        self.tokenizer = tokenizer
-        self.model = model
-        self.vector_dim = vector_dim  # Store vector dimension
-
-    def retrieve(self, query):
-        # Perform search in Milvus
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
-        query_inputs = self.tokenizer(query, return_tensors='pt')
-        vectors = query_inputs['input_ids']
-
-        # Ensure vectors are of correct dimension
-        if vectors.size(1) != self.vector_dim:
-            raise ValueError(f"Query vector dimension mismatch: expected {self.vector_dim}, got {vectors.size(1)}")
-
-        search_results = self.collection.search(
-            vectors.tolist(),
-            "vector",
-            search_params,
-            limit=5
+    # Fetch entities by IDs
+    if ids:
+        # Assuming 'text' is the field you want to retrieve
+        # You might need to adjust this based on your collection schema
+        df = collection.query(
+            expr=f"id in {ids}",
+            output_fields=["content"]
         )
-        docs = [hit.entity.get('content') for result in search_results for hit in result]
-        return docs
+        passages = [{'content': item['content']} for item in df]
+    else:
+        passages = []
 
-    def generate(self, query, docs):
-        # Generate a response using the retrieved documents
-        inputs = self.tokenizer(query, return_tensors="pt")
-        doc_inputs = self.tokenizer(docs, return_tensors="pt", padding=True, truncation=True)
+    return passages
 
-        outputs = self.model.generate(
-            input_ids=inputs['input_ids'],
-            context_input_ids=doc_inputs['input_ids'],
-            context_attention_mask=doc_inputs['attention_mask']
+def generate_answer(question, passages):
+    context = " ".join(passage['content'] for passage in passages)  # Adjust 'content' if necessary
+    input_text = f"{question} {context}"
+
+    # Encode the input text
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, padding=True)
+    with torch.no_grad():
+        outputs = rag_model.generate(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            num_beams=5,
+            early_stopping=True
         )
-        response = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
-        return response
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    def ask(self, query):
-        # Retrieve documents and generate an answer
-        docs = self.retrieve(query)
-        answer = self.generate(query, docs)
-        return answer
+def answer_question(question):
+    passages = retrieve_relevant_embeddings(question)
+    answer = generate_answer(question, passages)
+    return answer
 
-
+# Example usage
 if __name__ == "__main__":
-    # Connect to Milvus
-    connect_to_milvus()
-
-    # Load the collection
-    collection_name = "google_2022"
-    collection = load_collection(collection_name)
-
-    # Load the tokenizer and model
-    tokenizer, model = load_model_and_tokenizer()
-
-    # Get the vector dimension used in the collection schema
-    vector_dim = 1536  # Ensure this matches the dimension of your vectors
-
-    # Instantiate the RAG agent
-    rag_agent = RAGAgent(collection, tokenizer, model, vector_dim)
-
-    # Ask a question
-    question = "What is the environmental impact of Google's data centers?"
-    answer = rag_agent.ask(question)
-    print(f"Question: {question}\nAnswer: {answer}")
+    question = "What are the main environmental impacts discussed in the report?"
+    answer = answer_question(question)
+    print(answer)
