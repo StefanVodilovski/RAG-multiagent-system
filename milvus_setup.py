@@ -19,15 +19,18 @@ def pad_vector(vector, target_dim):
 
 def creating_schema():
     # Define the collection schema
-    fields = [
-        FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=False),
-        FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=vector_dim),
-        FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=10000),
-    ]
-
-    schema = CollectionSchema(fields=fields, description="example collection")
-
-    return schema
+    try:
+        # Define the collection schema
+        fields = [
+            FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=False),
+            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=vector_dim),
+            FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=10000),
+        ]
+        schema = CollectionSchema(fields=fields, description="example collection")
+        return schema
+    except Exception as e:
+        print(f"Error creating schema: {e}")
+        raise
 
 
 def creating_collection(schema):
@@ -46,28 +49,34 @@ def creating_collection(schema):
 
 def prepare_entities():
     entities = []
-    for index, row in df.iterrows():
-        vector = eval(row['vector'])
-        padded_vector = pad_vector(vector, vector_dim)
-        entity = {
-            "id": int(row['id']),
-            "vector": padded_vector.tolist(),
-            "content": row['text']
-        }
-        entities.append(entity)
-
-    return entities
+    try:
+        for index, row in df.iterrows():
+            vector = eval(row['vector'])
+            padded_vector = pad_vector(vector, vector_dim)
+            entity = {
+                "id": int(row['id']),
+                "vector": padded_vector.tolist(),
+                "content": row['text']
+            }
+            entities.append(entity)
+        return entities
+    except Exception as e:
+        print(f"Error preparing entities: {e}")
+        raise
 
 
 def create_index(collection):
     # Define an index for the collection
-    index_params = {
-        "index_type": "HNSW",  # Hierarchical Navigable Small World
-        "params": {"M": 16, "efConstruction": 200},  # Adjust parameters based on your use case
-        "metric_type": "L2"  # Euclidean distance
-    }
-    collection.create_index(field_name="vector", index_params=index_params)
-    print("Index created successfully.")
+    try:
+        index_params = {
+            "index_type": "HNSW",  # Hierarchical Navigable Small World
+            "params": {"M": 16, "efConstruction": 200},  # Adjust parameters based on your use case
+            "metric_type": "L2"  # Euclidean distance
+        }
+        collection.create_index(field_name="vector", index_params=index_params)
+        print("Index created successfully.")
+    except Exception as e:
+        print(f"An error occurred while creating the index: {e}")
 
 
 if __name__ == "__main__":
