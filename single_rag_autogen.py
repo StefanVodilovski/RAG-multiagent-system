@@ -12,6 +12,8 @@ from transformers import AutoTokenizer, AutoModel
 from PyPDF2 import PdfReader
 import fitz  # Ensure you have PyMuPDF installed
 
+from custom_model import CustomModelClient
+
 # Set up the embedder (free model for embedding)
 load_dotenv(Path(".env"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -28,6 +30,12 @@ collection = Collection(name=collection_name)
 config_list = [
     {"model": "gpt-3.5-turbo"},
 ]
+
+# Custom non gpt model FREE
+config_list_custom = autogen.config_list_from_json(
+    "OAI_CONFIG_LIST",
+    filter_dict={"model_client_cls": ["CustomModelClient"]},
+)
 
 llm_config = {
     "timeout": 60,
@@ -72,7 +80,7 @@ def extract_text_from_pdf(file_path):
             return ""
 
 # Define the agents
-boss = RetrieveUserProxyAgent(
+boss = autogen.UserProxyAgent(
     name="Env_Report_Analyzer",
     is_termination_msg=termination_msg,
     human_input_mode="NEVER",
@@ -101,6 +109,25 @@ boss_aid = RetrieveUserProxyAgent(
     description="Assistant with extra content retrieval power for solving environmental report problems.",
 )
 
+google_env_expert = autogen.AssistantAgent(
+    name="Google_Env_Expert",
+    is_termination_msg=termination_msg,
+    system_message="You are an expert at Google who has deep knowledge of environmental reports. Your role is to analyze the Google Environmental Report 2022 and provide insights and recommendations based on the report's content. Reply `TERMINATE` in the end when everything is done.",
+    llm_config={"config_list": config_list_custom},
+    description="Google Environmental Expert who can analyze the environmental report and provide expert insights and recommendations."
+)
+
+question_asker = autogen.AssistantAgent(
+    name="Google_Env_Expert",
+    is_termination_msg=termination_msg,
+    system_message="You are a question asker. Reply `TERMINATE` in the end when everything is done.",
+    llm_config={"config_list": config_list_custom},
+    description="Question asker who can ask questions for the provided text."
+)
+
+google_env_expert.register_model_client(model_client_cls=CustomModelClient)
+question_asker.register_model_client(model_client_cls=CustomModelClient)
+
 # Define the group chat manager and agents
 def _reset_agents():
     boss.reset()
@@ -109,7 +136,7 @@ def _reset_agents():
 def rag_chat():
     _reset_agents()
     groupchat = GroupChat(
-        agents=[boss, boss_aid], messages=[], max_round=12, speaker_selection_method="round_robin"
+        agents=[boss_aid, question_asker], messages=[], max_round=12, speaker_selection_method="round_robin"
     )
     manager = GroupChatManager(groupchat=groupchat)
 

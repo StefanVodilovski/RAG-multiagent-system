@@ -1,0 +1,11 @@
+[
+  {
+    "model": "Open-Orca/Mistral-7B-OpenOrca",
+    "model_client_cls": "CustomModelClient",
+    "device": "cuda",
+    "n": 1,
+    "params": {
+        "max_length": 1000
+    }
+  }
+]
