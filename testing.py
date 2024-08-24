@@ -66,7 +66,7 @@ boss_aid = RetrieveUserProxyAgent(
         "task": "qa",
         "docs_path": "./google_data",
         "chunk_token_size": 10000,  # Handle large documents
-        "model": "facebook/opt-350m",
+        "model": "gpt_3.5",
         "client": "milvus",
         "collection_name": "google_2022",
         "get_or_create": True,
