@@ -19,7 +19,7 @@ with open("config.yaml", "r") as file:
 
 
 def query(texts):
-    api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{config["model_id"]}"
+    api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{config['model_id']}"
     headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
     response = requests.post(api_url,
                              headers=headers,
