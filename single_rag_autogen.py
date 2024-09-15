@@ -19,6 +19,8 @@ load_dotenv(Path(".env"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["AUTOGEN_USE_DOCKER"] = "False"
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY_WRITE")
+os.environ["HUGGINGFACE_API_KEY"] = HUGGINGFACE_API_KEY
 
 
 # Connect to Milvus
@@ -135,11 +137,14 @@ def _reset_agents():
 
 def rag_chat():
     _reset_agents()
+    print("Ïnitializing group chat")
     groupchat = GroupChat(
         agents=[boss_aid, question_asker], messages=[], max_round=12, speaker_selection_method="round_robin"
     )
+    print("Initializing group chat manager")
     manager = GroupChatManager(groupchat=groupchat)
 
+    print("Initiating chat")
     # Start chatting with boss_aid as this is the user proxy agent.
     boss_aid.initiate_chat(
         manager,
@@ -149,4 +154,5 @@ def rag_chat():
     )
 
 # Run the chat
+print("Run the rag chat")
 rag_chat()
