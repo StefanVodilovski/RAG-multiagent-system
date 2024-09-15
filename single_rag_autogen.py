@@ -143,13 +143,13 @@ google_agents_aid = RetrieveUserProxyAgent(
     retrieve_config={
         "task": "qa",  # Ensure this task is implemented
         "docs_path": "./google_data/google-2022-environmental-report.pdf",
-        "chunk_token_size": 1000,  # Keep this high to handle large docs
+        "chunk_token_size": 2000,  # Keep this high to handle large docs
         # Changed model
         "model": llm_config_local_embed["config_list"][0]["model"],
         "client": "milvus",
         "collection_name": "google_2022",
         "get_or_create": True,
-        "max_tokens": 1024,  # Increase this value to handle large chunks
+        "max_tokens": 2048,  # Increase this value to handle large chunks
         "must_break_at_empty_line": False,  # Ensure this is False
     },
     code_execution_config=False,
